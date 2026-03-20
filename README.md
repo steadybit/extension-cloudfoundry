@@ -18,6 +18,12 @@ A [Steadybit](https://www.steadybit.com/) extension for [Cloud Foundry](https://
 | **Restart App** | Attack | Restarts an application (instantaneous) |
 | **Check App State** | Check | Polls app state and validates against an expected state (Started or Stopped) with "All the time" or "At least once" check modes |
 
+### Note on App State During Restart
+
+The Cloud Foundry V3 API exposes two desired states for an app: `STARTED` and `STOPPED`. When using the **Restart App** action, the app's desired state remains `STARTED` throughout — the restart operation [stops and restarts the underlying processes](https://docs.cloudfoundry.org/devguide/deploy-apps/start-restart-restage.html) without changing the API-level desired state. Only the **Stop App** action sets the state to `STOPPED`.
+
+This means the **Check App State** action will only observe a `STOPPED` state when the app has been explicitly stopped (via the Stop App action or `cf stop`), not during a restart.
+
 ## Configuration
 
 | Environment Variable | Helm value | Meaning | Required | Default |

@@ -1,16 +1,40 @@
 # Steadybit extension-cloudfoundry
 
-TODO describe what your extension is doing here from a user perspective.
+A [Steadybit](https://www.steadybit.com/) extension for [Cloud Foundry](https://www.cloudfoundry.org/) that discovers applications and provides actions to stop, restart, and check app state.
 
-TODO optionally add your extension to the [Reliability Hub](https://hub.steadybit.com/) by creating
-a [pull request](https://github.com/steadybit/reliability-hub-db) and add a link to this README.
+## Capabilities
+
+### Discovery
+
+- Discovers Cloud Foundry applications via the [CF V3 API](https://v3-apidocs.cloudfoundry.org/)
+- Attributes: app name, GUID, space, org, lifecycle type, labels
+- Supports both standard CF API (with `include` parameter) and Korifi (fallback to individual space/org lookups)
+
+### Actions
+
+| Action | Type | Description |
+|--------|------|-------------|
+| **Stop App** | Attack | Stops an application for a configured duration, restarts on rollback |
+| **Restart App** | Attack | Restarts an application (instantaneous) |
+| **Check App State** | Check | Polls app state and validates against expected states (Started, Stopped, No events) with "All the time" or "At least once" check modes |
 
 ## Configuration
 
-| Environment Variable                                      | Helm value                           | Meaning                                                                                                               | Required | Default                 |
-|-----------------------------------------------------------|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------|----------|-------------------------|
-| `STEADYBIT_EXTENSION_ROBOT_NAMES`                         |                                      | Comma-separated list of discoverable robots                                                                           | yes      | Bender,Terminator,R2-D2 |
-| `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES_ROBOT` | `discovery.attributes.excludes.robot | List of Robot Attributes which will be excluded during discovery. Checked by key equality and supporting trailing "*" | no       |                         |
+| Environment Variable | Helm value | Meaning | Required | Default |
+|---|---|---|---|---|
+| `STEADYBIT_EXTENSION_API_URL` | `cloudfoundry.apiUrl` | Cloud Foundry API endpoint URL (e.g., `https://api.cf.example.com`) | yes | |
+| `STEADYBIT_EXTENSION_USERNAME` | `cloudfoundry.username` | Username for UAA password grant authentication | no | |
+| `STEADYBIT_EXTENSION_PASSWORD` | `cloudfoundry.password` | Password for UAA password grant authentication | no | |
+| `STEADYBIT_EXTENSION_BEARER_TOKEN` | `cloudfoundry.bearerToken` | Static bearer token (e.g., for Korifi). Skips UAA when set | no | |
+| `STEADYBIT_EXTENSION_CLIENT_CERT_PATH` | | Path to client certificate for mTLS authentication | no | |
+| `STEADYBIT_EXTENSION_CLIENT_KEY_PATH` | | Path to client key for mTLS authentication | no | |
+| `STEADYBIT_EXTENSION_SKIP_TLS_VERIFY` | `cloudfoundry.skipTlsVerify` | Skip TLS certificate verification | no | `false` |
+| `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES_APP` | `discovery.attributes.excludes.app` | Attributes to exclude from discovery. Supports trailing `*` | no | |
+
+One of the following authentication methods must be configured:
+- **UAA password grant**: `USERNAME` + `PASSWORD`
+- **Static bearer token**: `BEARER_TOKEN` (e.g., for Korifi)
+- **Client certificate**: `CLIENT_CERT_PATH` + `CLIENT_KEY_PATH`
 
 The extension supports all environment variables provided by [steadybit/extension-kit](https://github.com/steadybit/extension-kit#environment-variables).
 
@@ -30,6 +54,9 @@ You must provide additional values to activate this extension.
 
 ```
 --set extension-cloudfoundry.enabled=true \
+--set extension-cloudfoundry.cloudfoundry.apiUrl=https://api.cf.example.com \
+--set extension-cloudfoundry.cloudfoundry.username=admin \
+--set extension-cloudfoundry.cloudfoundry.password=secret \
 ```
 
 Additional configuration options can be found in
@@ -50,6 +77,9 @@ helm upgrade steadybit-extension-cloudfoundry \
     --timeout 5m0s \
     --create-namespace \
     --namespace steadybit-agent \
+    --set cloudfoundry.apiUrl=https://api.cf.example.com \
+    --set cloudfoundry.username=admin \
+    --set cloudfoundry.password=secret \
     steadybit-extension-cloudfoundry/steadybit-extension-cloudfoundry
 ```
 
@@ -62,15 +92,27 @@ it using the package manager.
 
 After installing, configure the extension by editing `/etc/steadybit/extension-cloudfoundry` and then restart the service.
 
+## Local Testing with Korifi
+
+The `test/` directory contains scripts for testing against a local [Korifi](https://github.com/cloudfoundry/korifi) deployment on KIND:
+
+```bash
+./test/setup.sh            # Create KIND cluster + install Korifi + deploy test app
+./test/start_extension.sh  # Build and run the extension locally
+./test/run_all.sh          # Run all attack test suites
+./test/teardown.sh         # Delete the KIND cluster
+```
+
+Individual test suites can be run separately:
+
+```bash
+./test/test_stop.sh        # Test Stop App action
+./test/test_restart.sh     # Test Restart App action
+./test/test_check.sh       # Test Check App State action
+```
+
 ## Extension registration
 
 Make sure that the extension is registered with the agent. In most cases this is done automatically. Please refer to
 the [documentation](https://docs.steadybit.com/install-and-configure/install-agent/extension-registration) for more
 information about extension registration and how to verify.
-
-## Version and Revision
-
-The version and revision of the extension:
-- are printed during the startup of the extension
-- are added as a Docker label to the image
-- are available via the `version.txt`/`revision.txt` files in the root of the image

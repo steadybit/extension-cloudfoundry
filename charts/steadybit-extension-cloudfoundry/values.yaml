@@ -4,7 +4,7 @@
 image:
   # image.registry -- The container registry to use. Defaults to global.image.registry or ghcr.io.
   registry: null
-  # image.name -- The container image to use for the Steadybit scaffold extension.
+  # image.name -- The container image to use for the Steadybit Cloud Foundry extension.
   name: steadybit/extension-cloudfoundry
   # image.tag -- tag name of the extension-cloudfoundry container image to use. Defaults to appVersion of this chart.
   # See https://github.com/steadybit/extension-cloudfoundry/pkgs/container/extension-cloudfoundry/versions for all tags.
@@ -132,8 +132,24 @@ extraEnv: []
 #    name: env-secrets
 extraEnvFrom: []
 
+cloudfoundry:
+  # cloudfoundry.apiUrl -- The Cloud Foundry API endpoint URL (e.g., https://api.cf.example.com).
+  apiUrl: ""
+  # cloudfoundry.username -- Username for Cloud Foundry authentication via UAA (password grant).
+  username: ""
+  # cloudfoundry.password -- Password for Cloud Foundry authentication via UAA (password grant).
+  password: ""
+  # cloudfoundry.bearerToken -- Static bearer token for Kubernetes-based CF (e.g., Korifi).
+  # When set, UAA password grant is skipped and this token is used directly.
+  bearerToken: ""
+  # cloudfoundry.skipTlsVerify -- Skip TLS certificate verification (e.g., for self-signed certs).
+  skipTlsVerify: false
+  # cloudfoundry.existingSecret -- Name of an existing secret containing CF credentials.
+  # Supported keys: username, password, bearer-token.
+  existingSecret: null
+
 discovery:
   attributes:
     excludes:
-      # discovery.attributes.excludes.robot -- List of attributes to exclude from Robot discovery.
-      robot: []
+      # discovery.attributes.excludes.app -- List of attributes to exclude from Cloud Foundry app discovery.
+      app: []

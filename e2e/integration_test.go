@@ -1,28 +1,38 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2023 Steadybit GmbH
+// SPDX-FileCopyrightText: 2025 Steadybit GmbH
 
 package e2e
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
 	"github.com/steadybit/action-kit/go/action_kit_test/e2e"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_api"
 	"github.com/steadybit/discovery-kit/go/discovery_kit_test/validate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestWithMinikube(t *testing.T) {
+	server := createMockCfServer()
+	defer server.http.Close()
+
+	split := strings.SplitAfter(server.http.URL, ":")
+	port := split[len(split)-1]
+
 	extFactory := e2e.HelmExtensionFactory{
 		Name: "extension-cloudfoundry",
 		Port: 8080,
 		ExtraArgs: func(m *e2e.Minikube) []string {
 			return []string{
 				"--set", "logging.level=debug",
-				"--set", "discovery.attributes.excludes.robot={robot.tags.*}",
+				"--set", fmt.Sprintf("cloudfoundry.apiUrl=http://host.minikube.internal:%s", port),
+				"--set", "cloudfoundry.bearerToken=mock-token",
 			}
 		},
 	}
@@ -37,8 +47,24 @@ func TestWithMinikube(t *testing.T) {
 			Test: testDiscovery,
 		},
 		{
-			Name: "run scaffold",
-			Test: testRunscaffold,
+			Name: "stop action",
+			Test: testStopAction(server),
+		},
+		{
+			Name: "restart action",
+			Test: testRestartAction(server),
+		},
+		{
+			Name: "check app state - no events all the time - success",
+			Test: testCheckNoEventsAllTheTimeSuccess(server),
+		},
+		{
+			Name: "check app state - no events all the time - failure on state change",
+			Test: testCheckNoEventsAllTheTimeFailure(server),
+		},
+		{
+			Name: "check app state - no events at least once - success",
+			Test: testCheckNoEventsAtLeastOnceSuccess(server),
 		},
 	})
 }
@@ -48,29 +74,157 @@ func validateDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 }
 
 func testDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	target, err := e2e.PollForTarget(ctx, e, "com.steadybit.extension_cloudfoundry.robot", func(target discovery_kit_api.Target) bool {
-		return e2e.HasAttribute(target, "robot.name", "Bender")
+	target, err := e2e.PollForTarget(ctx, e, "com.steadybit.extension_cloudfoundry.app", func(target discovery_kit_api.Target) bool {
+		return e2e.HasAttribute(target, "cf.app.name", "my-web-app")
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, target.TargetType, "com.steadybit.extension_cloudfoundry.robot")
-	assert.Equal(t, target.Attributes["robot.reportedBy"], []string{"extension-cloudfoundry"})
-	assert.NotContains(t, target.Attributes, "robot.tags.firstTag")
+	assert.Equal(t, "com.steadybit.extension_cloudfoundry.app", target.TargetType)
+	assert.Equal(t, []string{"app-guid-1"}, target.Attributes["cf.app.guid"])
+	assert.Equal(t, []string{"extension-cloudfoundry"}, target.Attributes["cf.app.reportedBy"])
+	assert.Equal(t, []string{"dev-space"}, target.Attributes["cf.space.name"])
+	assert.Equal(t, []string{"my-org"}, target.Attributes["cf.org.name"])
 }
 
-func testRunscaffold(t *testing.T, m *e2e.Minikube, e *e2e.Extension) {
-	config := struct {
-		Duration int `json:"duration"`
-	}{
-		Duration: 3000,
+func testStopAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+		config := struct {
+			Duration int `json:"duration"`
+		}{Duration: 5000}
+
+		target := &action_kit_api.Target{
+			Name: "my-web-app",
+			Attributes: map[string][]string{
+				"cf.app.guid":  {"app-guid-1"},
+				"cf.app.name":  {"my-web-app"},
+				},
+		}
+
+		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.stop", target, config, nil)
+		require.NoError(t, err)
+
+		// App should have been stopped
+		assert.Equal(t, "STOPPED", server.getAppState("app-guid-1"))
+
+		require.NoError(t, exec.Cancel())
+
+		// After rollback, app should be started again
+		assert.Equal(t, "STARTED", server.getAppState("app-guid-1"))
 	}
-	exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.robot.log", &action_kit_api.Target{
-		Name: "robot",
-	}, config, nil)
-	require.NoError(t, err)
-	e2e.AssertLogContains(t, m, e.Pod, "Logging in log action **start**")
-	require.NoError(t, exec.Cancel())
 }
+
+func testRestartAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+		target := &action_kit_api.Target{
+			Name: "my-web-app",
+			Attributes: map[string][]string{
+				"cf.app.guid": {"app-guid-1"},
+				"cf.app.name": {"my-web-app"},
+			},
+		}
+
+		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.restart", target, nil, nil)
+		require.NoError(t, err)
+		require.NoError(t, exec.Cancel())
+
+		// App should still be running
+		assert.Equal(t, "STARTED", server.getAppState("app-guid-1"))
+	}
+}
+
+func checkTarget() *action_kit_api.Target {
+	return &action_kit_api.Target{
+		Name: "my-web-app",
+		Attributes: map[string][]string{
+			"cf.app.guid":  {"app-guid-1"},
+			"cf.app.name":  {"my-web-app"},
+		},
+	}
+}
+
+// "No events" + "All the time": should succeed when app state does not change.
+func testCheckNoEventsAllTheTimeSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+		// Ensure app is in a stable state
+		server.setAppState("app-guid-1", "STARTED")
+
+		config := struct {
+			Duration       int      `json:"duration"`
+			ExpectedStates []string `json:"expectedStates"`
+			StateCheckMode string   `json:"stateCheckMode"`
+		}{
+			Duration:       5000,
+			ExpectedStates: []string{"noEvents"},
+			StateCheckMode: "allTheTime",
+		}
+
+		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.check", checkTarget(), config, nil)
+		require.NoError(t, err)
+		require.NoError(t, exec.Cancel())
+	}
+}
+
+// "No events" + "All the time": should fail when app state changes during check.
+func testCheckNoEventsAllTheTimeFailure(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+		server.setAppState("app-guid-1", "STARTED")
+
+		config := struct {
+			Duration       int      `json:"duration"`
+			ExpectedStates []string `json:"expectedStates"`
+			StateCheckMode string   `json:"stateCheckMode"`
+		}{
+			Duration:       10000,
+			ExpectedStates: []string{"noEvents"},
+			StateCheckMode: "allTheTime",
+		}
+
+		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.check", checkTarget(), config, nil)
+		require.NoError(t, err)
+
+		// Change state during the check to trigger failure
+		time.Sleep(3 * time.Second)
+		server.setAppState("app-guid-1", "STOPPED")
+
+		err = exec.Wait()
+		require.Error(t, err)
+		require.ErrorContains(t, err, "unexpected state")
+
+		// Reset for subsequent tests
+		server.setAppState("app-guid-1", "STARTED")
+	}
+}
+
+// "No events" + "At least once": should succeed even if state changes later,
+// as long as there was at least one poll with no change.
+func testCheckNoEventsAtLeastOnceSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+		server.setAppState("app-guid-1", "STARTED")
+
+		config := struct {
+			Duration       int      `json:"duration"`
+			ExpectedStates []string `json:"expectedStates"`
+			StateCheckMode string   `json:"stateCheckMode"`
+		}{
+			Duration:       8000,
+			ExpectedStates: []string{"noEvents"},
+			StateCheckMode: "atLeastOnce",
+		}
+
+		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.check", checkTarget(), config, nil)
+		require.NoError(t, err)
+
+		// Change state mid-check — should still succeed because first polls had no events
+		time.Sleep(4 * time.Second)
+		server.setAppState("app-guid-1", "STOPPED")
+
+		require.NoError(t, exec.Cancel())
+
+		// Reset
+		server.setAppState("app-guid-1", "STARTED")
+	}
+}
+

@@ -9,16 +9,11 @@ require (
 	github.com/steadybit/action-kit/go/action_kit_api/v2 v2.10.4
 	github.com/steadybit/action-kit/go/action_kit_sdk v1.3.1
 	github.com/steadybit/action-kit/go/action_kit_test v1.4.7
-	github.com/steadybit/advice-kit/go/advice_kit_api v1.2.4
-	github.com/steadybit/advice-kit/go/advice_kit_sdk v1.0.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_api v1.7.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_commons v0.3.1
 	github.com/steadybit/discovery-kit/go/discovery_kit_sdk v1.3.2
 	github.com/steadybit/discovery-kit/go/discovery_kit_test v1.2.1
-	github.com/steadybit/event-kit/go/event_kit_api v1.6.2
 	github.com/steadybit/extension-kit v1.10.3
-	github.com/steadybit/preflight-kit/go/preflight_kit_api v1.4.2
-	github.com/steadybit/preflight-kit/go/preflight_kit_sdk/v2 v2.0.2
 	github.com/stretchr/testify v1.11.1
 )
 

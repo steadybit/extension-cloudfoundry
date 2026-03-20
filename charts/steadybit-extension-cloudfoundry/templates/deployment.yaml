@@ -56,9 +56,43 @@ spec:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
           env:
-            {{- if .Values.discovery.attributes.excludes.robot }}
-            - name: STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES_ROBOT
-              value: {{ join "," .Values.discovery.attributes.excludes.robot | quote }}
+            - name: STEADYBIT_EXTENSION_API_URL
+              value: {{ .Values.cloudfoundry.apiUrl | quote }}
+            {{- if .Values.cloudfoundry.skipTlsVerify }}
+            - name: STEADYBIT_EXTENSION_SKIP_TLS_VERIFY
+              value: "true"
+            {{- end }}
+            {{- if .Values.cloudfoundry.existingSecret }}
+            - name: STEADYBIT_EXTENSION_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudfoundry.existingSecret }}
+                  key: username
+                  optional: true
+            - name: STEADYBIT_EXTENSION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudfoundry.existingSecret }}
+                  key: password
+                  optional: true
+            - name: STEADYBIT_EXTENSION_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.cloudfoundry.existingSecret }}
+                  key: bearer-token
+                  optional: true
+            {{- else if .Values.cloudfoundry.bearerToken }}
+            - name: STEADYBIT_EXTENSION_BEARER_TOKEN
+              value: {{ .Values.cloudfoundry.bearerToken | quote }}
+            {{- else }}
+            - name: STEADYBIT_EXTENSION_USERNAME
+              value: {{ .Values.cloudfoundry.username | quote }}
+            - name: STEADYBIT_EXTENSION_PASSWORD
+              value: {{ .Values.cloudfoundry.password | quote }}
+            {{- end }}
+            {{- if .Values.discovery.attributes.excludes.app }}
+            - name: STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES_APP
+              value: {{ join "," .Values.discovery.attributes.excludes.app | quote }}
             {{- end }}
             {{- include "extensionlib.deployment.env" (list .) | nindent 12 }}
             {{- with .Values.extraEnv }}

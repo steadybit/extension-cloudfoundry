@@ -10,7 +10,7 @@ source "$SCRIPT_DIR/helpers.sh"
 check_prerequisites() {
   header "Checking prerequisites..."
   local missing=0
-  for tool in kind kubectl cf go docker; do
+  for tool in kind kubectl cf go docker git; do
     if command -v "$tool" >/dev/null 2>&1; then
       info "$tool: $(command -v "$tool")"
     else
@@ -137,8 +137,20 @@ deploy_test_app() {
   if cf app "$TEST_APP_NAME" >/dev/null 2>&1; then
     warn "App '$TEST_APP_NAME' already exists"
   else
-    info "Pushing '$TEST_APP_NAME' (docker image: $TEST_APP_IMAGE)..."
-    cf push "$TEST_APP_NAME" --docker-image "$TEST_APP_IMAGE" --no-route >/dev/null 2>&1
+    info "Cloning and pushing '$TEST_APP_NAME' (Spring Boot, slow startup)..."
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    git clone --depth 1 https://github.com/spring-projects/spring-petclinic.git "$tmpdir" >/dev/null 2>&1
+    cat > "$tmpdir/manifest.yml" << MANIFEST
+applications:
+  - name: $TEST_APP_NAME
+    no-route: true
+    memory: 1G
+    env:
+      BP_JVM_VERSION: "17"
+MANIFEST
+    (cd "$tmpdir" && cf push) 2>&1 | tail -5
+    rm -rf "$tmpdir"
   fi
 
   # Bind roles for our service account on the org/space namespaces

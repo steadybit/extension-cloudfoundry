@@ -6,7 +6,6 @@ package extapps
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/steadybit/action-kit/go/action_kit_api/v2"
@@ -19,10 +18,6 @@ import (
 const (
 	stateCheckModeAllTheTime  = "allTheTime"
 	stateCheckModeAtLeastOnce = "atLeastOnce"
-
-	expectedStateStarted  = "STARTED"
-	expectedStateStopped  = "STOPPED"
-	expectedStateNoEvents = "noEvents"
 )
 
 type checkAppAction struct{}
@@ -31,11 +26,9 @@ type CheckAppState struct {
 	AppGUID           string
 	AppName           string
 	End               time.Time
-	ExpectedStates    []string
+	ExpectedState     string
 	StateCheckMode    string
 	StateCheckSuccess bool
-	ObservedStates    map[string]bool // tracks which expected states have been seen
-	PreviousState     string
 }
 
 var (
@@ -87,25 +80,22 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				Order:        extutil.Ptr(0),
 			},
 			{
-				Name:        "expectedStates",
-				Label:       "Expected States",
-				Description: extutil.Ptr("The expected app states during the check."),
-				Type:        action_kit_api.ActionParameterTypeStringArray,
+				Name:         "expectedState",
+				Label:        "Expected State",
+				Description:  extutil.Ptr("The expected app state during the check."),
+				Type:         action_kit_api.ActionParameterTypeString,
+				DefaultValue: extutil.Ptr(AppStateStarted),
 				Options: extutil.Ptr([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Started",
-						Value: expectedStateStarted,
+						Value: AppStateStarted,
 					},
 					action_kit_api.ExplicitParameterOption{
 						Label: "Stopped",
-						Value: expectedStateStopped,
-					},
-					action_kit_api.ExplicitParameterOption{
-						Label: "No events (no state change)",
-						Value: expectedStateNoEvents,
+						Value: AppStateStopped,
 					},
 				}),
-				Required: extutil.Ptr(false),
+				Required: extutil.Ptr(true),
 				Order:    extutil.Ptr(1),
 			},
 			{
@@ -163,22 +153,11 @@ func (a *checkAppAction) Prepare(_ context.Context, state *CheckAppState, reques
 	appName := request.Target.Attributes["cf.app.name"]
 
 	duration := request.Config["duration"].(float64)
-
-	var expectedStates []string
-	if request.Config["expectedStates"] != nil {
-		expectedStates = extutil.ToStringArray(request.Config["expectedStates"])
-	}
+	expectedState := fmt.Sprintf("%v", request.Config["expectedState"])
 
 	var stateCheckMode string
 	if request.Config["stateCheckMode"] != nil {
 		stateCheckMode = fmt.Sprintf("%v", request.Config["stateCheckMode"])
-	}
-
-	// Get current app state as baseline
-	client := extclient.NewClient()
-	app, err := client.GetApp(context.Background(), appGUID[0])
-	if err != nil {
-		return nil, fmt.Errorf("failed to get initial app state: %w", err)
 	}
 
 	state.AppGUID = appGUID[0]
@@ -186,11 +165,9 @@ func (a *checkAppAction) Prepare(_ context.Context, state *CheckAppState, reques
 		state.AppName = appName[0]
 	}
 	state.End = time.Now().Add(time.Millisecond * time.Duration(duration))
-	state.ExpectedStates = expectedStates
+	state.ExpectedState = expectedState
 	state.StateCheckMode = stateCheckMode
 	state.StateCheckSuccess = false
-	state.ObservedStates = make(map[string]bool)
-	state.PreviousState = app.State
 
 	return nil, nil
 }
@@ -209,67 +186,34 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 	}
 
 	currentState := app.State
-	stateChanged := currentState != state.PreviousState
 	completed := now.After(state.End)
-
-	// Track observed states
-	if state.ObservedStates == nil {
-		state.ObservedStates = make(map[string]bool)
-	}
-	state.ObservedStates[currentState] = true
+	isExpected := currentState == state.ExpectedState
 
 	var checkError *action_kit_api.ActionKitError
 
-	if len(state.ExpectedStates) > 0 {
-		matchesExpected := matchesExpectedStates(state.ExpectedStates, currentState, stateChanged)
-
-		if state.StateCheckMode == stateCheckModeAllTheTime {
-			if !matchesExpected {
-				checkError = extutil.Ptr(action_kit_api.ActionKitError{
-					Title: fmt.Sprintf("App '%s' has unexpected state '%s' (changed: %v), expected: %v.",
-						state.AppName, currentState, stateChanged, formatExpectedStates(state.ExpectedStates)),
-					Status: extutil.Ptr(action_kit_api.Failed),
-				})
-			}
-			// At completion, check that all non-noEvents expected states were observed
-			if completed && checkError == nil {
-				missing := missingExpectedStates(state.ExpectedStates, state.ObservedStates)
-				if len(missing) > 0 {
-					checkError = extutil.Ptr(action_kit_api.ActionKitError{
-						Title: fmt.Sprintf("App '%s': expected states %v were never observed during check duration.",
-							state.AppName, formatExpectedStates(missing)),
-						Status: extutil.Ptr(action_kit_api.Failed),
-					})
-				}
-			}
-		} else if state.StateCheckMode == stateCheckModeAtLeastOnce {
-			if matchesExpected {
-				state.StateCheckSuccess = true
-			}
-			if completed && !state.StateCheckSuccess {
-				checkError = extutil.Ptr(action_kit_api.ActionKitError{
-					Title: fmt.Sprintf("App '%s' never reached expected state %v during check duration.",
-						state.AppName, formatExpectedStates(state.ExpectedStates)),
-					Status: extutil.Ptr(action_kit_api.Failed),
-				})
-			}
-		}
-	} else {
-		// No expected states: check that nothing changes
-		if stateChanged {
+	if state.StateCheckMode == stateCheckModeAllTheTime {
+		if !isExpected {
 			checkError = extutil.Ptr(action_kit_api.ActionKitError{
-				Title: fmt.Sprintf("App '%s' had unexpected state change from '%s' to '%s'.",
-					state.AppName, state.PreviousState, currentState),
+				Title: fmt.Sprintf("App '%s' is in state '%s', expected '%s'.",
+					state.AppName, currentState, state.ExpectedState),
+				Status: extutil.Ptr(action_kit_api.Failed),
+			})
+		}
+	} else if state.StateCheckMode == stateCheckModeAtLeastOnce {
+		if isExpected {
+			state.StateCheckSuccess = true
+		}
+		if completed && !state.StateCheckSuccess {
+			checkError = extutil.Ptr(action_kit_api.ActionKitError{
+				Title: fmt.Sprintf("App '%s' never reached state '%s' during check duration.",
+					state.AppName, state.ExpectedState),
 				Status: extutil.Ptr(action_kit_api.Failed),
 			})
 		}
 	}
 
-	// Update previous state for next poll
-	state.PreviousState = currentState
-
 	metrics := []action_kit_api.Metric{
-		*toAppStateMetric(state, currentState, stateChanged, now),
+		*toAppStateMetric(state, currentState, now),
 	}
 
 	return &action_kit_api.StatusResult{
@@ -279,86 +223,17 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 	}, nil
 }
 
-// matchesExpectedStates checks if the current poll result matches the expected states.
-func matchesExpectedStates(expectedStates []string, currentState string, stateChanged bool) bool {
-	for _, expected := range expectedStates {
-		switch expected {
-		case expectedStateNoEvents:
-			if !stateChanged {
-				return true
-			}
-		case expectedStateStarted, expectedStateStopped:
-			if currentState == expected {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// missingExpectedStates returns expected states (excluding noEvents) that were never observed.
-func missingExpectedStates(expectedStates []string, observedStates map[string]bool) []string {
-	var missing []string
-	for _, expected := range expectedStates {
-		if expected == expectedStateNoEvents {
-			continue
-		}
-		if !observedStates[expected] {
-			missing = append(missing, expected)
-		}
-	}
-	return missing
-}
-
-func formatExpectedStates(states []string) []string {
-	formatted := make([]string, len(states))
-	for i, s := range states {
-		if s == expectedStateNoEvents {
-			formatted[i] = "No events"
-		} else {
-			formatted[i] = s
-		}
-	}
-	return formatted
-}
-
-func toAppStateMetric(state *CheckAppState, currentState string, stateChanged bool, now time.Time) *action_kit_api.Metric {
+func toAppStateMetric(state *CheckAppState, currentState string, now time.Time) *action_kit_api.Metric {
 	tooltip := fmt.Sprintf("State: %s", currentState)
 
-	// Use different widget states to visually distinguish app states:
-	//   STARTED + expected   -> "success" (green/teal)
-	//   STOPPED + expected   -> "warn"    (yellow/orange) — visually distinct from STARTED
-	//   unexpected state     -> "danger"  (red)
-	//   no change + expected -> "info"    (blue/grey)
 	var metricState string
-	isExpected := slices.Contains(state.ExpectedStates, currentState)
-	noEventsExpected := slices.Contains(state.ExpectedStates, expectedStateNoEvents)
-
-	onlyExpectsThis := len(state.ExpectedStates) == 1 && state.ExpectedStates[0] == currentState
-
-	switch {
-	case currentState == expectedStateStopped && isExpected && onlyExpectsThis:
+	if currentState == state.ExpectedState {
 		metricState = "success"
-	case currentState == expectedStateStopped && isExpected:
-		metricState = "warn"
-	case currentState == expectedStateStopped && !isExpected:
-		metricState = "danger"
-	case currentState == expectedStateStarted && isExpected:
-		metricState = "success"
-	case currentState == expectedStateStarted && !isExpected && !noEventsExpected:
-		metricState = "danger"
-	case !stateChanged && (len(state.ExpectedStates) == 0 || noEventsExpected):
-		metricState = "success"
-	default:
-		metricState = "info"
-	}
-
-	var metricId string
-	if len(state.ExpectedStates) > 0 {
-		metricId = fmt.Sprintf("%s - Expected: %v", state.AppName, formatExpectedStates(state.ExpectedStates))
 	} else {
-		metricId = fmt.Sprintf("%s - Expected: No changes", state.AppName)
+		metricState = "danger"
 	}
+
+	metricId := fmt.Sprintf("%s - Expected: %s", state.AppName, state.ExpectedState)
 
 	return extutil.Ptr(action_kit_api.Metric{
 		Name: extutil.Ptr("cf_app_state"),

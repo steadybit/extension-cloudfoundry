@@ -18,9 +18,9 @@ import (
 type stopAction struct{}
 
 type StopActionState struct {
-	AppGUID        string
-	AppName        string
-	InitialState   string
+	AppGUID      string
+	AppName      string
+	InitialState string
 }
 
 var _ action_kit_sdk.ActionWithStop[StopActionState] = (*stopAction)(nil)
@@ -118,7 +118,7 @@ func (a *stopAction) Start(_ context.Context, state *StopActionState) (*action_k
 
 func (a *stopAction) Stop(_ context.Context, state *StopActionState) (*action_kit_api.StopResult, error) {
 	// Only restart if the app was originally running
-	if state.InitialState != "STARTED" {
+	if state.InitialState != AppStateStarted {
 		log.Info().Str("appGUID", state.AppGUID).Str("appName", state.AppName).Str("initialState", state.InitialState).Msg("Skipping restart, app was not running before stop")
 		return nil, nil
 	}

@@ -16,7 +16,7 @@ A [Steadybit](https://www.steadybit.com/) extension for [Cloud Foundry](https://
 |--------|------|-------------|
 | **Stop App** | Attack | Stops an application for a configured duration, restarts on rollback |
 | **Restart App** | Attack | Restarts an application (instantaneous) |
-| **Check App State** | Check | Polls app state and validates against expected states (Started, Stopped, No events) with "All the time" or "At least once" check modes |
+| **Check App State** | Check | Polls app state and validates against an expected state (Started or Stopped) with "All the time" or "At least once" check modes |
 
 ## Configuration
 

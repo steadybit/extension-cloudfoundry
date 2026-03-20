@@ -55,16 +55,16 @@ func TestWithMinikube(t *testing.T) {
 			Test: testRestartAction(server),
 		},
 		{
-			Name: "check app state - no events all the time - success",
-			Test: testCheckNoEventsAllTheTimeSuccess(server),
+			Name: "check app state - started all the time - success",
+			Test: testCheckStartedAllTheTimeSuccess(server),
 		},
 		{
-			Name: "check app state - no events all the time - failure on state change",
-			Test: testCheckNoEventsAllTheTimeFailure(server),
+			Name: "check app state - started all the time - failure on stop",
+			Test: testCheckStartedAllTheTimeFailure(server),
 		},
 		{
-			Name: "check app state - no events at least once - success",
-			Test: testCheckNoEventsAtLeastOnceSuccess(server),
+			Name: "check app state - stopped at least once - success",
+			Test: testCheckStoppedAtLeastOnceSuccess(server),
 		},
 	})
 }
@@ -98,9 +98,9 @@ func testStopAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e 
 		target := &action_kit_api.Target{
 			Name: "my-web-app",
 			Attributes: map[string][]string{
-				"cf.app.guid":  {"app-guid-1"},
-				"cf.app.name":  {"my-web-app"},
-				},
+				"cf.app.guid": {"app-guid-1"},
+				"cf.app.name": {"my-web-app"},
+			},
 		}
 
 		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.stop", target, config, nil)
@@ -139,25 +139,24 @@ func checkTarget() *action_kit_api.Target {
 	return &action_kit_api.Target{
 		Name: "my-web-app",
 		Attributes: map[string][]string{
-			"cf.app.guid":  {"app-guid-1"},
-			"cf.app.name":  {"my-web-app"},
+			"cf.app.guid": {"app-guid-1"},
+			"cf.app.name": {"my-web-app"},
 		},
 	}
 }
 
-// "No events" + "All the time": should succeed when app state does not change.
-func testCheckNoEventsAllTheTimeSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+// STARTED + "All the time": should succeed when app stays started.
+func testCheckStartedAllTheTimeSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
-		// Ensure app is in a stable state
 		server.setAppState("app-guid-1", "STARTED")
 
 		config := struct {
-			Duration       int      `json:"duration"`
-			ExpectedStates []string `json:"expectedStates"`
-			StateCheckMode string   `json:"stateCheckMode"`
+			Duration       int    `json:"duration"`
+			ExpectedState  string `json:"expectedState"`
+			StateCheckMode string `json:"stateCheckMode"`
 		}{
 			Duration:       5000,
-			ExpectedStates: []string{"noEvents"},
+			ExpectedState:  "STARTED",
 			StateCheckMode: "allTheTime",
 		}
 
@@ -167,58 +166,57 @@ func testCheckNoEventsAllTheTimeSuccess(server *mockCfServer) func(t *testing.T,
 	}
 }
 
-// "No events" + "All the time": should fail when app state changes during check.
-func testCheckNoEventsAllTheTimeFailure(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+// STARTED + "All the time": should fail when app gets stopped during check.
+func testCheckStartedAllTheTimeFailure(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 		server.setAppState("app-guid-1", "STARTED")
 
 		config := struct {
-			Duration       int      `json:"duration"`
-			ExpectedStates []string `json:"expectedStates"`
-			StateCheckMode string   `json:"stateCheckMode"`
+			Duration       int    `json:"duration"`
+			ExpectedState  string `json:"expectedState"`
+			StateCheckMode string `json:"stateCheckMode"`
 		}{
 			Duration:       10000,
-			ExpectedStates: []string{"noEvents"},
+			ExpectedState:  "STARTED",
 			StateCheckMode: "allTheTime",
 		}
 
 		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.check", checkTarget(), config, nil)
 		require.NoError(t, err)
 
-		// Change state during the check to trigger failure
+		// Stop app during the check to trigger failure
 		time.Sleep(3 * time.Second)
 		server.setAppState("app-guid-1", "STOPPED")
 
 		err = exec.Wait()
 		require.Error(t, err)
-		require.ErrorContains(t, err, "unexpected state")
+		require.ErrorContains(t, err, "STOPPED")
 
 		// Reset for subsequent tests
 		server.setAppState("app-guid-1", "STARTED")
 	}
 }
 
-// "No events" + "At least once": should succeed even if state changes later,
-// as long as there was at least one poll with no change.
-func testCheckNoEventsAtLeastOnceSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
+// STOPPED + "At least once": should succeed when app gets stopped during check.
+func testCheckStoppedAtLeastOnceSuccess(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 	return func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 		server.setAppState("app-guid-1", "STARTED")
 
 		config := struct {
-			Duration       int      `json:"duration"`
-			ExpectedStates []string `json:"expectedStates"`
-			StateCheckMode string   `json:"stateCheckMode"`
+			Duration       int    `json:"duration"`
+			ExpectedState  string `json:"expectedState"`
+			StateCheckMode string `json:"stateCheckMode"`
 		}{
 			Duration:       8000,
-			ExpectedStates: []string{"noEvents"},
+			ExpectedState:  "STOPPED",
 			StateCheckMode: "atLeastOnce",
 		}
 
 		exec, err := e.RunAction("com.steadybit.extension_cloudfoundry.app.check", checkTarget(), config, nil)
 		require.NoError(t, err)
 
-		// Change state mid-check — should still succeed because first polls had no events
-		time.Sleep(4 * time.Second)
+		// Stop app mid-check — should succeed because we see STOPPED at least once
+		time.Sleep(3 * time.Second)
 		server.setAppState("app-guid-1", "STOPPED")
 
 		require.NoError(t, exec.Cancel())
@@ -227,4 +225,3 @@ func testCheckNoEventsAtLeastOnceSuccess(server *mockCfServer) func(t *testing.T
 		server.setAppState("app-guid-1", "STARTED")
 	}
 }
-

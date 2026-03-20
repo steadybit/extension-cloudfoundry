@@ -17,8 +17,8 @@ KIND_CLUSTER_NAME="korifi"
 KIND_CONTEXT="kind-${KIND_CLUSTER_NAME}"
 CF_ORG="test-org"
 CF_SPACE="test-space"
-TEST_APP_NAME="nginx"
-TEST_APP_IMAGE="nginxinc/nginx-unprivileged:1.23.2"
+TEST_APP_NAME="petclinic"
+TEST_APP_IMAGE=""  # pushed via buildpack, not docker image
 
 pass() { echo -e "  ${GREEN}PASS${NC} $1"; }
 fail() { echo -e "  ${RED}FAIL${NC} $1"; }

@@ -13,7 +13,6 @@ import (
 	"github.com/steadybit/extension-cloudfoundry/config"
 	"github.com/steadybit/extension-cloudfoundry/extclient"
 	"github.com/steadybit/extension-kit/extbuild"
-	"github.com/steadybit/extension-kit/extutil"
 )
 
 type appDiscovery struct{}
@@ -35,7 +34,7 @@ func (d *appDiscovery) Describe() discovery_kit_api.DiscoveryDescription {
 	return discovery_kit_api.DiscoveryDescription{
 		Id: TargetType,
 		Discover: discovery_kit_api.DescribingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("60s"),
+			CallInterval: new("60s"),
 		},
 	}
 }
@@ -44,9 +43,9 @@ func (d *appDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
 		Id:       TargetType,
 		Label:    discovery_kit_api.PluralLabel{One: "Cloud Foundry App", Other: "Cloud Foundry Apps"},
-		Category: extutil.Ptr("cloud"),
+		Category: new("cloud"),
 		Version:  extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:     extutil.Ptr(targetIcon),
+		Icon:     new(targetIcon),
 		Table: discovery_kit_api.Table{
 			Columns: []discovery_kit_api.Column{
 				{Attribute: "cf.app.name"},

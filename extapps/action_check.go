@@ -50,42 +50,42 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Check App State",
 		Description: "Check the state of a Cloud Foundry application over time.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(targetIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			TargetType: TargetType,
-			SelectionTemplates: extutil.Ptr([]action_kit_api.TargetSelectionTemplate{
+			SelectionTemplates: new([]action_kit_api.TargetSelectionTemplate{
 				{
 					Label:       "by app name",
-					Description: extutil.Ptr("Find app by name"),
+					Description: new("Find app by name"),
 					Query:       "cf.app.name=\"\"",
 				},
 				{
 					Label:       "by space and app name",
-					Description: extutil.Ptr("Find app by space and name"),
+					Description: new("Find app by space and name"),
 					Query:       "cf.space.name=\"\" AND cf.app.name=\"\"",
 				},
 			}),
 		}),
-		Category:    extutil.Ptr("resource"),
+		Category:    new("resource"),
 		Kind:        action_kit_api.Check,
 		TimeControl: action_kit_api.TimeControlInternal,
 		Parameters: []action_kit_api.ActionParameter{
 			{
 				Name:         "duration",
 				Label:        "Duration",
-				Description:  extutil.Ptr("How long to check the app state."),
+				Description:  new("How long to check the app state."),
 				Type:         action_kit_api.ActionParameterTypeDuration,
-				DefaultValue: extutil.Ptr("30s"),
-				Required:     extutil.Ptr(true),
-				Order:        extutil.Ptr(0),
+				DefaultValue: new("30s"),
+				Required:     new(true),
+				Order:        new(0),
 			},
 			{
 				Name:         "expectedState",
 				Label:        "Expected State",
-				Description:  extutil.Ptr("The expected app state during the check."),
+				Description:  new("The expected app state during the check."),
 				Type:         action_kit_api.ActionParameterTypeString,
-				DefaultValue: extutil.Ptr(AppStateStarted),
-				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+				DefaultValue: new(AppStateStarted),
+				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "Started",
 						Value: AppStateStarted,
@@ -95,16 +95,16 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 						Value: AppStateStopped,
 					},
 				}),
-				Required: extutil.Ptr(true),
-				Order:    extutil.Ptr(1),
+				Required: new(true),
+				Order:    new(1),
 			},
 			{
 				Name:         "stateCheckMode",
 				Label:        "State Check Mode",
-				Description:  extutil.Ptr("How should the state be checked?"),
+				Description:  new("How should the state be checked?"),
 				Type:         action_kit_api.ActionParameterTypeString,
-				DefaultValue: extutil.Ptr(stateCheckModeAllTheTime),
-				Options: extutil.Ptr([]action_kit_api.ParameterOption{
+				DefaultValue: new(stateCheckModeAllTheTime),
+				Options: new([]action_kit_api.ParameterOption{
 					action_kit_api.ExplicitParameterOption{
 						Label: "All the time",
 						Value: stateCheckModeAllTheTime,
@@ -114,11 +114,11 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 						Value: stateCheckModeAtLeastOnce,
 					},
 				}),
-				Required: extutil.Ptr(true),
-				Order:    extutil.Ptr(2),
+				Required: new(true),
+				Order:    new(2),
 			},
 		},
-		Widgets: extutil.Ptr([]action_kit_api.Widget{
+		Widgets: new([]action_kit_api.Widget{
 			action_kit_api.StateOverTimeWidget{
 				Type:  action_kit_api.ComSteadybitWidgetStateOverTime,
 				Title: "CF App State",
@@ -134,13 +134,13 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				Tooltip: action_kit_api.StateOverTimeWidgetTooltipConfig{
 					From: "tooltip",
 				},
-				Value: extutil.Ptr(action_kit_api.StateOverTimeWidgetValueConfig{
-					Hide: extutil.Ptr(true),
+				Value: new(action_kit_api.StateOverTimeWidgetValueConfig{
+					Hide: new(true),
 				}),
 			},
 		}),
-		Status: extutil.Ptr(action_kit_api.MutatingEndpointReferenceWithCallInterval{
-			CallInterval: extutil.Ptr("500ms"),
+		Status: new(action_kit_api.MutatingEndpointReferenceWithCallInterval{
+			CallInterval: new("500ms"),
 		}),
 	}
 }
@@ -193,7 +193,7 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 
 	if state.StateCheckMode == stateCheckModeAllTheTime {
 		if !isExpected {
-			checkError = extutil.Ptr(action_kit_api.ActionKitError{
+			checkError = new(action_kit_api.ActionKitError{
 				Title: fmt.Sprintf("App '%s' is in state '%s', expected '%s'.",
 					state.AppName, currentState, state.ExpectedState),
 				Status: extutil.Ptr(action_kit_api.Failed),
@@ -204,7 +204,7 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 			state.StateCheckSuccess = true
 		}
 		if completed && !state.StateCheckSuccess {
-			checkError = extutil.Ptr(action_kit_api.ActionKitError{
+			checkError = new(action_kit_api.ActionKitError{
 				Title: fmt.Sprintf("App '%s' never reached state '%s' during check duration.",
 					state.AppName, state.ExpectedState),
 				Status: extutil.Ptr(action_kit_api.Failed),
@@ -219,7 +219,7 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 	return &action_kit_api.StatusResult{
 		Completed: completed,
 		Error:     checkError,
-		Metrics:   extutil.Ptr(metrics),
+		Metrics:   new(metrics),
 	}, nil
 }
 
@@ -235,8 +235,8 @@ func toAppStateMetric(state *CheckAppState, currentState string, now time.Time) 
 
 	metricId := fmt.Sprintf("%s - Expected: %s", state.AppName, state.ExpectedState)
 
-	return extutil.Ptr(action_kit_api.Metric{
-		Name: extutil.Ptr("cf_app_state"),
+	return new(action_kit_api.Metric{
+		Name: new("cf_app_state"),
 		Metric: map[string]string{
 			"metric.id": metricId,
 			"state":     metricState,

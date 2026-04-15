@@ -38,23 +38,23 @@ func (a *restartAction) Describe() action_kit_api.ActionDescription {
 		Label:       "Restart App",
 		Description: "Restart a Cloud Foundry application.",
 		Version:     extbuild.GetSemverVersionStringOrUnknown(),
-		Icon:        extutil.Ptr(targetIcon),
-		TargetSelection: extutil.Ptr(action_kit_api.TargetSelection{
+		Icon:        new(targetIcon),
+		TargetSelection: new(action_kit_api.TargetSelection{
 			TargetType: TargetType,
-			SelectionTemplates: extutil.Ptr([]action_kit_api.TargetSelectionTemplate{
+			SelectionTemplates: new([]action_kit_api.TargetSelectionTemplate{
 				{
 					Label:       "by app name",
-					Description: extutil.Ptr("Find app by name"),
+					Description: new("Find app by name"),
 					Query:       "cf.app.name=\"\"",
 				},
 				{
 					Label:       "by space and app name",
-					Description: extutil.Ptr("Find app by space and name"),
+					Description: new("Find app by space and name"),
 					Query:       "cf.space.name=\"\" AND cf.app.name=\"\"",
 				},
 			}),
 		}),
-		Category:    extutil.Ptr("resource"),
+		Category:    new("resource"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlInstantaneous,
 		Parameters:  []action_kit_api.ActionParameter{},

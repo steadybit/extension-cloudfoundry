@@ -88,8 +88,8 @@ func (m *mockCfServer) setAppState(guid, state string) {
 
 func (m *mockCfServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 	// Return a minimal CF API root response (no UAA since we use bearer token auth)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"links": map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
+		"links": map[string]any{
 			"self": map[string]string{"href": m.http.URL},
 		},
 	})
@@ -101,13 +101,13 @@ func (m *mockCfServer) handleListApps(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug().Msg("Mock CF: listing apps")
 
-	resources := make([]map[string]interface{}, 0, len(m.apps))
+	resources := make([]map[string]any, 0, len(m.apps))
 	for _, app := range m.apps {
 		resources = append(resources, m.appJSON(app))
 	}
 
-	resp := map[string]interface{}{
-		"pagination": map[string]interface{}{
+	resp := map[string]any{
+		"pagination": map[string]any{
 			"total_results": len(m.apps),
 			"total_pages":   1,
 			"next":          nil,
@@ -117,19 +117,19 @@ func (m *mockCfServer) handleListApps(w http.ResponseWriter, r *http.Request) {
 
 	// If include=space,space.organization is requested, add included resources
 	if strings.Contains(r.URL.RawQuery, "include=") {
-		resp["included"] = map[string]interface{}{
-			"spaces": []map[string]interface{}{
+		resp["included"] = map[string]any{
+			"spaces": []map[string]any{
 				{
 					"guid": "space-guid-1",
 					"name": "dev-space",
-					"relationships": map[string]interface{}{
-						"organization": map[string]interface{}{
+					"relationships": map[string]any{
+						"organization": map[string]any{
 							"data": map[string]string{"guid": "org-guid-1"},
 						},
 					},
 				},
 			},
-			"organizations": []map[string]interface{}{
+			"organizations": []map[string]any{
 				{
 					"guid": "org-guid-1",
 					"name": "my-org",
@@ -149,7 +149,7 @@ func (m *mockCfServer) handleGetApp(w http.ResponseWriter, r *http.Request) {
 
 	app, ok := m.apps[guid]
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]interface{}{
+		writeJSON(w, http.StatusNotFound, map[string]any{
 			"errors": []map[string]string{{"detail": "App not found", "title": "CF-ResourceNotFound"}},
 		})
 		return
@@ -166,7 +166,7 @@ func (m *mockCfServer) handleStopApp(w http.ResponseWriter, r *http.Request) {
 
 	app, ok := m.apps[guid]
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]interface{}{
+		writeJSON(w, http.StatusNotFound, map[string]any{
 			"errors": []map[string]string{{"detail": "App not found", "title": "CF-ResourceNotFound"}},
 		})
 		return
@@ -185,7 +185,7 @@ func (m *mockCfServer) handleRestartApp(w http.ResponseWriter, r *http.Request) 
 
 	app, ok := m.apps[guid]
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]interface{}{
+		writeJSON(w, http.StatusNotFound, map[string]any{
 			"errors": []map[string]string{{"detail": "App not found", "title": "CF-ResourceNotFound"}},
 		})
 		return
@@ -196,33 +196,33 @@ func (m *mockCfServer) handleRestartApp(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, m.appJSON(app))
 }
 
-func (m *mockCfServer) appJSON(app *mockApp) map[string]interface{} {
-	return map[string]interface{}{
+func (m *mockCfServer) appJSON(app *mockApp) map[string]any {
+	return map[string]any{
 		"guid":       app.GUID,
 		"name":       app.Name,
 		"state":      app.State,
 		"created_at": "2025-01-01T00:00:00Z",
 		"updated_at": "2025-01-01T00:00:00Z",
-		"lifecycle": map[string]interface{}{
+		"lifecycle": map[string]any{
 			"type": "buildpack",
-			"data": map[string]interface{}{},
+			"data": map[string]any{},
 		},
-		"relationships": map[string]interface{}{
-			"space": map[string]interface{}{
+		"relationships": map[string]any{
+			"space": map[string]any{
 				"data": map[string]string{"guid": app.SpaceGUID},
 			},
 		},
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"labels":      map[string]string{},
 			"annotations": map[string]string{},
 		},
-		"links": map[string]interface{}{
+		"links": map[string]any{
 			"self": map[string]string{"href": fmt.Sprintf("/v3/apps/%s", app.GUID)},
 		},
 	}
 }
 
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(data)

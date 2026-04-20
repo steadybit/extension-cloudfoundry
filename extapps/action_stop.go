@@ -55,7 +55,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 				},
 			}),
 		}),
-		Category:    extutil.Ptr("state"),
+		Category:    new("state"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{

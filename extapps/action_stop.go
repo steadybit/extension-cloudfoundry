@@ -55,7 +55,7 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 				},
 			}),
 		}),
-		Category:    new("Cloud Foundry"),
+		Category:    extutil.Ptr("state"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{

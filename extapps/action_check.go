@@ -66,7 +66,7 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				},
 			}),
 		}),
-		Category:    new("Cloud Foundry"),
+		Category:    extutil.Ptr("state"),
 		Kind:        action_kit_api.Check,
 		TimeControl: action_kit_api.TimeControlInternal,
 		Parameters: []action_kit_api.ActionParameter{
@@ -146,11 +146,11 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *checkAppAction) Prepare(_ context.Context, state *CheckAppState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	appGUID := request.Target.Attributes["cf.app.guid"]
+	appGUID := request.Target.Attributes["cloudfoundry.app.guid"]
 	if len(appGUID) == 0 {
-		return nil, fmt.Errorf("target is missing cf.app.guid attribute")
+		return nil, fmt.Errorf("target is missing cloudfoundry.app.guid attribute")
 	}
-	appName := request.Target.Attributes["cf.app.name"]
+	appName := request.Target.Attributes["cloudfoundry.app.name"]
 
 	duration := request.Config["duration"].(float64)
 	expectedState := fmt.Sprintf("%v", request.Config["expectedState"])

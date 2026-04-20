@@ -43,17 +43,17 @@ func (d *appDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 	return discovery_kit_api.TargetDescription{
 		Id:       TargetType,
 		Label:    discovery_kit_api.PluralLabel{One: "Cloud Foundry App", Other: "Cloud Foundry Apps"},
-		Category: new("cloud"),
+		Category: new("Cloud Foundry"),
 		Version:  extbuild.GetSemverVersionStringOrUnknown(),
 		Icon:     new(targetIcon),
 		Table: discovery_kit_api.Table{
 			Columns: []discovery_kit_api.Column{
-				{Attribute: "cf.app.name"},
-				{Attribute: "cf.space.name"},
-				{Attribute: "cf.org.name"},
+				{Attribute: "cloudfoundry.app.name"},
+				{Attribute: "cloudfoundry.space.name"},
+				{Attribute: "cloudfoundry.org.name"},
 			},
 			OrderBy: []discovery_kit_api.OrderBy{
-				{Attribute: "cf.app.name", Direction: "ASC"},
+				{Attribute: "cloudfoundry.app.name", Direction: "ASC"},
 			},
 		},
 	}
@@ -62,35 +62,35 @@ func (d *appDiscovery) DescribeTarget() discovery_kit_api.TargetDescription {
 func (d *appDiscovery) DescribeAttributes() []discovery_kit_api.AttributeDescription {
 	return []discovery_kit_api.AttributeDescription{
 		{
-			Attribute: "cf.app.name",
+			Attribute: "cloudfoundry.app.name",
 			Label:     discovery_kit_api.PluralLabel{One: "CF App Name", Other: "CF App Names"},
 		},
 		{
-			Attribute: "cf.app.guid",
+			Attribute: "cloudfoundry.app.guid",
 			Label:     discovery_kit_api.PluralLabel{One: "CF App GUID", Other: "CF App GUIDs"},
 		},
 		{
-			Attribute: "cf.space.name",
+			Attribute: "cloudfoundry.space.name",
 			Label:     discovery_kit_api.PluralLabel{One: "CF Space Name", Other: "CF Space Names"},
 		},
 		{
-			Attribute: "cf.space.guid",
+			Attribute: "cloudfoundry.space.guid",
 			Label:     discovery_kit_api.PluralLabel{One: "CF Space GUID", Other: "CF Space GUIDs"},
 		},
 		{
-			Attribute: "cf.org.name",
+			Attribute: "cloudfoundry.org.name",
 			Label:     discovery_kit_api.PluralLabel{One: "CF Org Name", Other: "CF Org Names"},
 		},
 		{
-			Attribute: "cf.org.guid",
+			Attribute: "cloudfoundry.org.guid",
 			Label:     discovery_kit_api.PluralLabel{One: "CF Org GUID", Other: "CF Org GUIDs"},
 		},
 		{
-			Attribute: "cf.app.lifecycle.type",
+			Attribute: "cloudfoundry.app.lifecycle.type",
 			Label:     discovery_kit_api.PluralLabel{One: "CF Lifecycle Type", Other: "CF Lifecycle Types"},
 		},
 		{
-			Attribute: "cf.app.reportedBy",
+			Attribute: "cloudfoundry.app.reportedBy",
 			Label:     discovery_kit_api.PluralLabel{One: "reported by", Other: "reported by"},
 		},
 	}
@@ -117,30 +117,25 @@ func (d *appDiscovery) DiscoverTargets(_ context.Context) ([]discovery_kit_api.T
 	targets := make([]discovery_kit_api.Target, 0, len(apps))
 	for _, app := range apps {
 		attrs := map[string][]string{
-			"cf.app.name":           {app.Name},
-			"cf.app.guid":           {app.GUID},
-			"cf.app.lifecycle.type": {app.Lifecycle.Type},
-			"cf.app.reportedBy":     {"extension-cloudfoundry"},
+			"cloudfoundry.app.name":           {app.Name},
+			"cloudfoundry.app.guid":           {app.GUID},
+			"cloudfoundry.app.lifecycle.type": {app.Lifecycle.Type},
+			"cloudfoundry.app.reportedBy":     {"extension-cloudfoundry"},
 		}
 
 		spaceGUID := app.Relationships.Space.Data.GUID
 		if spaceGUID != "" {
-			attrs["cf.space.guid"] = []string{spaceGUID}
+			attrs["cloudfoundry.space.guid"] = []string{spaceGUID}
 			if space, ok := spaceMap[spaceGUID]; ok {
-				attrs["cf.space.name"] = []string{space.Name}
+				attrs["cloudfoundry.space.name"] = []string{space.Name}
 				orgGUID := space.Relationships.Organization.Data.GUID
 				if orgGUID != "" {
-					attrs["cf.org.guid"] = []string{orgGUID}
+					attrs["cloudfoundry.org.guid"] = []string{orgGUID}
 					if org, ok := orgMap[orgGUID]; ok {
-						attrs["cf.org.name"] = []string{org.Name}
+						attrs["cloudfoundry.org.name"] = []string{org.Name}
 					}
 				}
 			}
-		}
-
-		// Add labels as attributes
-		for k, v := range app.Metadata.Labels {
-			attrs["cf.app.label."+k] = []string{v}
 		}
 
 		targets = append(targets, discovery_kit_api.Target{

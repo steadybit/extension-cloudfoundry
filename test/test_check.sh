@@ -55,8 +55,8 @@ run_check() {
   "target": {
     "name": "$TEST_APP_NAME",
     "attributes": {
-      "cf.app.guid": ["$app_guid"],
-      "cf.app.name": ["$TEST_APP_NAME"]
+      "cloudfoundry.app.guid": ["$app_guid"],
+      "cloudfoundry.app.name": ["$TEST_APP_NAME"]
     }
   },
   "config": {

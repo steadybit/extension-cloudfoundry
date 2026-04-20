@@ -45,9 +45,9 @@ get_app_guid() {
 import json, sys
 d = json.load(sys.stdin)
 for t in d.get('targets', d if isinstance(d, list) else []):
-  for v in t.get('attributes', {}).get('cf.app.name', []):
+  for v in t.get('attributes', {}).get('cloudfoundry.app.name', []):
     if v == '${app_name}':
-      print(t['attributes']['cf.app.guid'][0])
+      print(t['attributes']['cloudfoundry.app.guid'][0])
       sys.exit(0)
 sys.exit(1)
 "

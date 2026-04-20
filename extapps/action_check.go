@@ -57,16 +57,16 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				{
 					Label:       "by app name",
 					Description: new("Find app by name"),
-					Query:       "cf.app.name=\"\"",
+					Query:       "cloudfoundry.app.name=\"\"",
 				},
 				{
 					Label:       "by space and app name",
 					Description: new("Find app by space and name"),
-					Query:       "cf.space.name=\"\" AND cf.app.name=\"\"",
+					Query:       "cloudfoundry.space.name=\"\" AND cloudfoundry.app.name=\"\"",
 				},
 			}),
 		}),
-		Category:    new("resource"),
+		Category:    new("Cloud Foundry"),
 		Kind:        action_kit_api.Check,
 		TimeControl: action_kit_api.TimeControlInternal,
 		Parameters: []action_kit_api.ActionParameter{

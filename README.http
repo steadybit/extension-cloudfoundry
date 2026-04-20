@@ -48,9 +48,9 @@ Content-Type: application/json
   "target": {
     "name": "my-app",
     "attributes": {
-      "cf.app.guid": ["abc-123"],
-      "cf.app.name": ["my-app"],
-      "cf.app.state": ["STARTED"]
+      "cloudfoundry.app.guid": ["abc-123"],
+      "cloudfoundry.app.name": ["my-app"],
+      "cloudfoundry.app.state": ["STARTED"]
     }
   },
   "config": {
@@ -101,8 +101,8 @@ Content-Type: application/json
   "target": {
     "name": "my-app",
     "attributes": {
-      "cf.app.guid": ["abc-123"],
-      "cf.app.name": ["my-app"]
+      "cloudfoundry.app.guid": ["abc-123"],
+      "cloudfoundry.app.name": ["my-app"]
     }
   },
   "config": {}

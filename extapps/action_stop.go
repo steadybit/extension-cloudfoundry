@@ -46,16 +46,16 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 				{
 					Label:       "by app name",
 					Description: new("Find app by name"),
-					Query:       "cf.app.name=\"\"",
+					Query:       "cloudfoundry.app.name=\"\"",
 				},
 				{
 					Label:       "by space and app name",
 					Description: new("Find app by space and name"),
-					Query:       "cf.space.name=\"\" AND cf.app.name=\"\"",
+					Query:       "cloudfoundry.space.name=\"\" AND cloudfoundry.app.name=\"\"",
 				},
 			}),
 		}),
-		Category:    new("resource"),
+		Category:    new("Cloud Foundry"),
 		Kind:        action_kit_api.Attack,
 		TimeControl: action_kit_api.TimeControlExternal,
 		Parameters: []action_kit_api.ActionParameter{
@@ -74,11 +74,11 @@ func (a *stopAction) Describe() action_kit_api.ActionDescription {
 }
 
 func (a *stopAction) Prepare(_ context.Context, state *StopActionState, request action_kit_api.PrepareActionRequestBody) (*action_kit_api.PrepareResult, error) {
-	appGUID := request.Target.Attributes["cf.app.guid"]
+	appGUID := request.Target.Attributes["cloudfoundry.app.guid"]
 	if len(appGUID) == 0 {
-		return nil, fmt.Errorf("target is missing cf.app.guid attribute")
+		return nil, fmt.Errorf("target is missing cloudfoundry.app.guid attribute")
 	}
-	appName := request.Target.Attributes["cf.app.name"]
+	appName := request.Target.Attributes["cloudfoundry.app.name"]
 
 	state.AppGUID = appGUID[0]
 	if len(appName) > 0 {

@@ -78,15 +78,15 @@ func testDiscovery(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
 	defer cancel()
 
 	target, err := e2e.PollForTarget(ctx, e, "com.steadybit.extension_cloudfoundry.app", func(target discovery_kit_api.Target) bool {
-		return e2e.HasAttribute(target, "cf.app.name", "my-web-app")
+		return e2e.HasAttribute(target, "cloudfoundry.app.name", "my-web-app")
 	})
 
 	require.NoError(t, err)
 	assert.Equal(t, "com.steadybit.extension_cloudfoundry.app", target.TargetType)
-	assert.Equal(t, []string{"app-guid-1"}, target.Attributes["cf.app.guid"])
-	assert.Equal(t, []string{"extension-cloudfoundry"}, target.Attributes["cf.app.reportedBy"])
-	assert.Equal(t, []string{"dev-space"}, target.Attributes["cf.space.name"])
-	assert.Equal(t, []string{"my-org"}, target.Attributes["cf.org.name"])
+	assert.Equal(t, []string{"app-guid-1"}, target.Attributes["cloudfoundry.app.guid"])
+	assert.Equal(t, []string{"extension-cloudfoundry"}, target.Attributes["cloudfoundry.app.reportedBy"])
+	assert.Equal(t, []string{"dev-space"}, target.Attributes["cloudfoundry.space.name"])
+	assert.Equal(t, []string{"my-org"}, target.Attributes["cloudfoundry.org.name"])
 }
 
 func testStopAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e *e2e.Extension) {
@@ -98,8 +98,8 @@ func testStopAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube, e 
 		target := &action_kit_api.Target{
 			Name: "my-web-app",
 			Attributes: map[string][]string{
-				"cf.app.guid": {"app-guid-1"},
-				"cf.app.name": {"my-web-app"},
+				"cloudfoundry.app.guid": {"app-guid-1"},
+				"cloudfoundry.app.name": {"my-web-app"},
 			},
 		}
 
@@ -121,8 +121,8 @@ func testRestartAction(server *mockCfServer) func(t *testing.T, _ *e2e.Minikube,
 		target := &action_kit_api.Target{
 			Name: "my-web-app",
 			Attributes: map[string][]string{
-				"cf.app.guid": {"app-guid-1"},
-				"cf.app.name": {"my-web-app"},
+				"cloudfoundry.app.guid": {"app-guid-1"},
+				"cloudfoundry.app.name": {"my-web-app"},
 			},
 		}
 
@@ -139,8 +139,8 @@ func checkTarget() *action_kit_api.Target {
 	return &action_kit_api.Target{
 		Name: "my-web-app",
 		Attributes: map[string][]string{
-			"cf.app.guid": {"app-guid-1"},
-			"cf.app.name": {"my-web-app"},
+			"cloudfoundry.app.guid": {"app-guid-1"},
+			"cloudfoundry.app.name": {"my-web-app"},
 		},
 	}
 }

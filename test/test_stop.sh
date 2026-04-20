@@ -51,7 +51,7 @@ main() {
   # --- Prepare ---
   header "Step 1: Prepare"
   PREPARE_RESP=$(ext_post "/com.steadybit.extension_cloudfoundry.app.stop/prepare" \
-    "{\"target\":{\"name\":\"$TEST_APP_NAME\",\"attributes\":{\"cf.app.guid\":[\"$APP_GUID\"],\"cf.app.name\":[\"$TEST_APP_NAME\"]}},\"config\":{\"duration\":30000}}")
+    "{\"target\":{\"name\":\"$TEST_APP_NAME\",\"attributes\":{\"cloudfoundry.app.guid\":[\"$APP_GUID\"],\"cloudfoundry.app.name\":[\"$TEST_APP_NAME\"]}},\"config\":{\"duration\":30000}}")
 
   assert_pass "echo '$PREPARE_RESP' | python3 -c \"import json,sys; d=json.load(sys.stdin); assert d['state']['AppGUID'] == '$APP_GUID'\"" \
     "Prepare returns correct AppGUID"

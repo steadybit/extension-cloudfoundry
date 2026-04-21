@@ -66,6 +66,7 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				},
 			}),
 		}),
+		Technology:  new("Cloud Foundry"),
 		Category:    new("State"),
 		Kind:        action_kit_api.Check,
 		TimeControl: action_kit_api.TimeControlInternal,

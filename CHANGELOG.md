@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.3
+
+- chore(deps): bump alpine from 3.23 to 3.24
+
 ## v1.0.2
 
 - chore(deps): bump github.com/steadybit/discovery-kit/go/discovery_kit_sdk

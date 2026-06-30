@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a "Fail early" option to the app state check. When enabled (the default, matching the previous behavior), the check fails as soon as a deviating state is observed. When disabled, the check keeps collecting events for the whole duration and only fails at the end of the step (with a past-tense message, since the state may have recovered by then).
+
 ## v1.0.4
 
 - chore(deps): bump github.com/steadybit/extension-kit

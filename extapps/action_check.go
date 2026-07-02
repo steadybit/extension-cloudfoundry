@@ -29,6 +29,11 @@ type CheckAppState struct {
 	ExpectedState     string
 	StateCheckMode    string
 	StateCheckSuccess bool
+	FailEarly         bool
+	// DeviationSeen and DeviationTitle are used in 'fail at end' mode (FailEarly = false) to remember
+	// that a deviating state was observed during the step so the failure can be reported once the step ends.
+	DeviationSeen  bool
+	DeviationTitle string
 }
 
 var (
@@ -118,6 +123,16 @@ func (a *checkAppAction) Describe() action_kit_api.ActionDescription {
 				Required: new(true),
 				Order:    new(2),
 			},
+			{
+				Name:         "failEarly",
+				Label:        "Fail early",
+				Description:  new("If enabled, the check fails as soon as a deviating state is observed. If disabled, the check keeps collecting events for the whole duration and only fails at the end of the step. Only affects the 'All the time' mode; 'At least once' can only be evaluated at the end of the step."),
+				Type:         action_kit_api.ActionParameterTypeBoolean,
+				DefaultValue: new("true"),
+				Advanced:     new(true),
+				Required:     new(false),
+				Order:        new(3),
+			},
 		},
 		Widgets: new([]action_kit_api.Widget{
 			action_kit_api.StateOverTimeWidget{
@@ -169,6 +184,11 @@ func (a *checkAppAction) Prepare(_ context.Context, state *CheckAppState, reques
 	state.ExpectedState = expectedState
 	state.StateCheckMode = stateCheckMode
 	state.StateCheckSuccess = false
+	// Default to failing early to preserve the previous behavior for experiments that don't set this parameter.
+	state.FailEarly = true
+	if request.Config["failEarly"] != nil {
+		state.FailEarly = extutil.ToBool(request.Config["failEarly"])
+	}
 
 	return nil, nil
 }
@@ -194,9 +214,24 @@ func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*actio
 
 	if state.StateCheckMode == stateCheckModeAllTheTime {
 		if !isExpected {
+			if state.FailEarly {
+				// Fail as soon as a deviating state is observed (present tense - it is deviating now).
+				checkError = new(action_kit_api.ActionKitError{
+					Title: fmt.Sprintf("App '%s' is in state '%s', expected '%s'.",
+						state.AppName, currentState, state.ExpectedState),
+					Status: extutil.Ptr(action_kit_api.Failed),
+				})
+			} else {
+				// Keep collecting events and remember the deviation to report it at the end of the
+				// step (past tense - the state may have recovered by the time this is reported).
+				state.DeviationSeen = true
+				state.DeviationTitle = fmt.Sprintf("App '%s' was in state '%s', expected '%s'.",
+					state.AppName, currentState, state.ExpectedState)
+			}
+		}
+		if !state.FailEarly && completed && state.DeviationSeen {
 			checkError = new(action_kit_api.ActionKitError{
-				Title: fmt.Sprintf("App '%s' is in state '%s', expected '%s'.",
-					state.AppName, currentState, state.ExpectedState),
+				Title:  state.DeviationTitle,
 				Status: extutil.Ptr(action_kit_api.Failed),
 			})
 		}

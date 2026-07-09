@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func prepareRequest(config map[string]interface{}) action_kit_api.PrepareActionRequestBody {
+func prepareRequest(config map[string]any) action_kit_api.PrepareActionRequestBody {
 	config["duration"] = 1000 * 60
 	config["expectedState"] = AppStateStarted
 	config["stateCheckMode"] = stateCheckModeAllTheTime
 	return extutil.JsonMangle(action_kit_api.PrepareActionRequestBody{
 		Config: config,
-		Target: extutil.Ptr(action_kit_api.Target{
+		Target: new(action_kit_api.Target{
 			Attributes: map[string][]string{
 				"cloudfoundry.app.guid": {"guid-1"},
 				"cloudfoundry.app.name": {"my-app"},
@@ -29,7 +29,7 @@ func prepareRequest(config map[string]interface{}) action_kit_api.PrepareActionR
 
 func TestCheckAppPrepareDefaultsFailEarlyTrue(t *testing.T) {
 	// Given - failEarly not provided
-	request := prepareRequest(map[string]interface{}{})
+	request := prepareRequest(map[string]any{})
 	action := checkAppAction{}
 	state := action.NewEmptyState()
 
@@ -44,7 +44,7 @@ func TestCheckAppPrepareDefaultsFailEarlyTrue(t *testing.T) {
 
 func TestCheckAppPrepareExtractsFailEarlyFalse(t *testing.T) {
 	// Given
-	request := prepareRequest(map[string]interface{}{"failEarly": false})
+	request := prepareRequest(map[string]any{"failEarly": false})
 	action := checkAppAction{}
 	state := action.NewEmptyState()
 

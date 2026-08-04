@@ -193,11 +193,24 @@ func (a *checkAppAction) Prepare(_ context.Context, state *CheckAppState, reques
 	return nil, nil
 }
 
-func (a *checkAppAction) Start(_ context.Context, _ *CheckAppState) (*action_kit_api.StartResult, error) {
-	return nil, nil
+func (a *checkAppAction) Start(_ context.Context, state *CheckAppState) (*action_kit_api.StartResult, error) {
+	statusResult, err := checkAppStatus(state)
+	if statusResult == nil {
+		return nil, err
+	}
+	return &action_kit_api.StartResult{
+		Artifacts: statusResult.Artifacts,
+		Error:     statusResult.Error,
+		Messages:  statusResult.Messages,
+		Metrics:   statusResult.Metrics,
+	}, err
 }
 
 func (a *checkAppAction) Status(_ context.Context, state *CheckAppState) (*action_kit_api.StatusResult, error) {
+	return checkAppStatus(state)
+}
+
+func checkAppStatus(state *CheckAppState) (*action_kit_api.StatusResult, error) {
 	now := time.Now()
 
 	client := extclient.NewClient()

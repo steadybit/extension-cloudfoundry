@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.8
+
+- chore(deps): bump github.com/steadybit/action-kit/go/action_kit_test
+- chore(deps): bump golang from 1.26-alpine to 1.27-alpine
+
 ## v1.0.7
 
 - chore(deps): bump github.com/steadybit/action-kit/go/action_kit_test

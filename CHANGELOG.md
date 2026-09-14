@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.9
+
+- chore(deps): bump github.com/KimMachineGun/automemlimit from 0.7.5 to 1.0.0
+
 ## v1.0.8
 
 - chore(deps): bump github.com/steadybit/action-kit/go/action_kit_test

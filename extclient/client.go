@@ -17,6 +17,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/steadybit/extension-cloudfoundry/config"
+	"github.com/steadybit/extension-kit/exttls"
 )
 
 type Client struct {
@@ -132,10 +133,12 @@ var once sync.Once
 // NewClient creates a new CF API client from the global config.
 func NewClient() *Client {
 	once.Do(func() {
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-
-		tlsConfig := &tls.Config{
-			InsecureSkipVerify: config.Config.SkipTlsVerify, //nolint:gosec // user-configured
+		// exttls keeps the system CA pool (so CAs mounted via SSL_CERT_DIR are trusted) and applies
+		// STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY; cloudfoundry.skipTlsVerify still works on top of it.
+		transport := exttls.Transport()
+		tlsConfig := transport.TLSClientConfig
+		if config.Config.SkipTlsVerify {
+			tlsConfig.InsecureSkipVerify = true //nolint:gosec // user-configured
 		}
 
 		// Load client certificate for mTLS if configured
@@ -150,8 +153,6 @@ func NewClient() *Client {
 			log.Info().Msg("Using client certificate authentication")
 		}
 
-		transport.TLSClientConfig = tlsConfig
-
 		instance = &Client{
 			httpClient:     &http.Client{Timeout: 30 * time.Second, Transport: transport},
 			apiUrl:         strings.TrimRight(config.Config.ApiUrl, "/"),
@@ -159,7 +160,7 @@ func NewClient() *Client {
 			password:       config.Config.Password,
 			staticToken:    config.Config.BearerToken,
 			clientCertAuth: clientCertAuth,
-			skipTlsVerify:  config.Config.SkipTlsVerify,
+			skipTlsVerify:  tlsConfig.InsecureSkipVerify,
 		}
 	})
 	return instance

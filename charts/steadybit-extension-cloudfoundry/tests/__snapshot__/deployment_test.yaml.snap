@@ -169,6 +169,95 @@ manifest should match snapshot with TLS:
               secret:
                 optional: false
                 secretName: server-cert
+manifest should match snapshot with custom certificates and skipTlsVerify:
+  1: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        steadybit.com/discovery-disabled: "true"
+        steadybit.com/extension: "true"
+      name: RELEASE-NAME-steadybit-extension-cloudfoundry
+      namespace: NAMESPACE
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: steadybit-extension-cloudfoundry
+      template:
+        metadata:
+          annotations:
+            oneagent.dynatrace.com/injection: "false"
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: steadybit-extension-cloudfoundry
+            steadybit.com/discovery-disabled: "true"
+            steadybit.com/extension: "true"
+        spec:
+          containers:
+            - env:
+                - name: STEADYBIT_EXTENSION_API_URL
+                  value: ""
+                - name: STEADYBIT_EXTENSION_SKIP_TLS_VERIFY
+                  value: "true"
+                - name: STEADYBIT_EXTENSION_USERNAME
+                  value: ""
+                - name: STEADYBIT_EXTENSION_PASSWORD
+                  value: ""
+                - name: STEADYBIT_LOG_LEVEL
+                  value: INFO
+                - name: STEADYBIT_LOG_FORMAT
+                  value: text
+                - name: SSL_CERT_DIR
+                  value: /etc/ssl/extra-certs:/etc/ssl/certs
+              image: ghcr.io/steadybit/extension-cloudfoundry:v0.0.0
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 5
+                httpGet:
+                  path: /health/liveness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 5
+              name: extension
+              readinessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /health/readiness
+                  port: 8081
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+              resources:
+                limits:
+                  cpu: 250m
+                  memory: 128Mi
+                requests:
+                  cpu: 50m
+                  memory: 16Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - mountPath: /etc/ssl/extra-certs
+                  name: extra-certs
+                  readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: steadybit-extension-cloudfoundry
+          volumes:
+            - configMap:
+                name: cloudfoundry-self-signed-ca
+              name: extra-certs
 manifest should match snapshot with custom image registry:
   1: |
     apiVersion: apps/v1

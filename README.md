@@ -32,9 +32,9 @@ This means the **Check App State** action will only observe a `STOPPED` state wh
 | `STEADYBIT_EXTENSION_USERNAME` | `cloudfoundry.username` | Username for UAA password grant authentication | no | |
 | `STEADYBIT_EXTENSION_PASSWORD` | `cloudfoundry.password` | Password for UAA password grant authentication | no | |
 | `STEADYBIT_EXTENSION_BEARER_TOKEN` | `cloudfoundry.bearerToken` | Static bearer token (e.g., for Korifi). Skips UAA when set | no | |
-| `STEADYBIT_EXTENSION_CLIENT_CERT_PATH` | | Path to client certificate for mTLS authentication | no | |
-| `STEADYBIT_EXTENSION_CLIENT_KEY_PATH` | | Path to client key for mTLS authentication | no | |
-| `STEADYBIT_EXTENSION_SKIP_TLS_VERIFY` | `cloudfoundry.skipTlsVerify` | Skip TLS certificate verification | no | `false` |
+| `STEADYBIT_EXTENSION_CLIENT_CERT_PATH` | via `extraEnv` | Path to client certificate for mTLS authentication. Mount it with `extraVolumes`/`extraVolumeMounts` | no | |
+| `STEADYBIT_EXTENSION_CLIENT_KEY_PATH` | via `extraEnv` | Path to client key for mTLS authentication. Mount it with `extraVolumes`/`extraVolumeMounts` | no | |
+| `STEADYBIT_EXTENSION_SKIP_TLS_VERIFY` | `cloudfoundry.skipTlsVerify` | Skip TLS certificate verification. See [Importing your own certificates](#importing-your-own-certificates). `STEADYBIT_EXTENSION_INSECURE_SKIP_VERIFY`, shared by all extensions, works too | no | `false` |
 | `STEADYBIT_EXTENSION_DISCOVERY_ATTRIBUTES_EXCLUDES_APP` | `discovery.attributes.excludes.app` | Attributes to exclude from discovery. Supports trailing `*` | no | |
 
 One of the following authentication methods must be configured:
@@ -51,6 +51,47 @@ extensions:
   stop the extension reporting targets you do not want.
 - [Group Matching](https://github.com/steadybit/discovery-kit/blob/main/docs/target-enrichment.md#group-matching) —
   tag discovered targets with a group, so enrichment rules only match within it.
+
+## Importing your own certificates
+
+If your Cloud Foundry API (or its UAA) is served with a self-signed certificate, or one issued by a private CA,
+either trust the CA (recommended) or skip certificate verification.
+
+### Option 1: Mounting custom certificates
+
+Store the CA certificate (`*.crt`) in a config map:
+
+```shell
+kubectl create configmap -n steadybit-agent cloudfoundry-self-signed-ca --from-file=./self-signed-ca.crt
+```
+
+Then mount it and add it to the trusted certificate directories:
+
+```yaml
+extraVolumeMounts:
+  - name: extra-certs
+    mountPath: /etc/ssl/extra-certs
+    readOnly: true
+extraVolumes:
+  - name: extra-certs
+    configMap:
+      name: cloudfoundry-self-signed-ca
+extraEnv:
+  - name: SSL_CERT_DIR
+    value: /etc/ssl/extra-certs:/etc/ssl/certs
+```
+
+The same `extraVolumes`/`extraVolumeMounts` mechanism mounts the client certificate and key for mTLS authentication
+(`STEADYBIT_EXTENSION_CLIENT_CERT_PATH`/`STEADYBIT_EXTENSION_CLIENT_KEY_PATH`), e.g. from a secret.
+
+### Option 2: Skipping certificate verification
+
+Disables TLS certificate verification. Suitable for testing, not recommended for production.
+
+```yaml
+cloudfoundry:
+  skipTlsVerify: true
+```
 
 ## Installation
 

@@ -132,6 +132,21 @@ extraEnv: []
 #    name: env-secrets
 extraEnvFrom: []
 
+# extraVolumeMounts -- Additional volumeMounts to add to the container, e.g. to mount custom CA certificates
+#  or the client certificate and key referenced by STEADYBIT_EXTENSION_CLIENT_CERT_PATH/STEADYBIT_EXTENSION_CLIENT_KEY_PATH
+# extraVolumeMounts:
+#   - name: extra-certs
+#     mountPath: /etc/ssl/extra-certs
+#     readOnly: true
+extraVolumeMounts: []
+
+# extraVolumes -- Additional volumes to add to the pod
+# extraVolumes:
+#   - name: extra-certs
+#     configMap:
+#       name: cloudfoundry-self-signed-ca
+extraVolumes: []
+
 cloudfoundry:
   # cloudfoundry.apiUrl -- The Cloud Foundry API endpoint URL (e.g., https://api.cf.example.com).
   apiUrl: ""
@@ -142,7 +157,7 @@ cloudfoundry:
   # cloudfoundry.bearerToken -- Static bearer token for Kubernetes-based CF (e.g., Korifi).
   # When set, UAA password grant is skipped and this token is used directly.
   bearerToken: ""
-  # cloudfoundry.skipTlsVerify -- Skip TLS certificate verification (e.g., for self-signed certs).
+  # cloudfoundry.skipTlsVerify -- Skip TLS certificate verification (e.g., for self-signed certs). Prefer mounting your CA, see README.
   skipTlsVerify: false
   # cloudfoundry.existingSecret -- Name of an existing secret containing CF credentials.
   # Supported keys: username, password, bearer-token.

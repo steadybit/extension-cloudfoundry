@@ -11,6 +11,35 @@ entries:
         - name: Steadybit reliability hub
           url: https://hub.steadybit.com
     apiVersion: v2
+    appVersion: v1.0.13
+    created: "2026-10-26T09:24:51.366145364Z"
+    dependencies:
+    - name: extensionlib
+      repository: https://steadybit.github.io/helm-charts
+      version: ^1.6.0
+    description: Steadybit extension-cloudfoundry Helm chart for Kubernetes.
+    digest: c41f35cf37fca294a0d081e6dbd8ba89f0692af794a56c83511a1ffb05edce61
+    home: https://www.steadybit.com/
+    icon: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
+    maintainers:
+    - email: daniel.reuter@steadybit.com
+      name: reuda
+    name: steadybit-extension-cloudfoundry
+    sources:
+    - https://github.com/steadybit/extension-cloudfoundry
+    urls:
+    - https://github.com/steadybit/extension-cloudfoundry/releases/download/steadybit-extension-cloudfoundry-1.0.19/steadybit-extension-cloudfoundry-1.0.19.tgz
+    version: 1.0.19
+  - annotations:
+      artifacthub.io/images: |
+        - name: logo
+          image: https://steadybit-website-assets.s3.amazonaws.com/logo-symbol-transparent.png
+      artifacthub.io/links: |-
+        - name: Steadybit website
+          url: https://www.steadybit.com
+        - name: Steadybit reliability hub
+          url: https://hub.steadybit.com
+    apiVersion: v2
     appVersion: v1.0.12
     created: "2026-10-21T12:47:13.015861023Z"
     dependencies:
@@ -581,4 +610,4 @@ entries:
     urls:
     - https://github.com/steadybit/extension-cloudfoundry/releases/download/steadybit-extension-cloudfoundry-0.1.0/steadybit-extension-cloudfoundry-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-21T12:47:13.01603647Z"
+generated: "2026-10-26T09:24:51.366221488Z"

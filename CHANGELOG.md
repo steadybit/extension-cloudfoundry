@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.13
+
+- chore(deps): bump action_kit_test to v1.4.13 (#34)
+- chore(deps): bump github.com/KimMachineGun/automemlimit
+- feat: support Cloud Foundry with self-signed certificates (#33)
+
 ## v1.0.12
 
 - chore(deps): bump golang.org/x/net to v0.61.0

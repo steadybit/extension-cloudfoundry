@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- feat: the app state check shows Fail early with the other check settings
+
 ## v1.0.13
 
 - chore(deps): bump action_kit_test to v1.4.13 (#34)

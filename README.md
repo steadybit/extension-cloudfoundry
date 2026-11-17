@@ -171,3 +171,4 @@ Individual test suites can be run separately:
 Make sure that the extension is registered with the agent. In most cases this is done automatically. Please refer to
 the [documentation](https://docs.steadybit.com/install-and-configure/install-agent/extension-registration) for more
 information about extension registration and how to verify.
+
